@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import {
   addDays,
   formatDateISO,
+  formatDateRangeUK,
+  formatDateUKFromIso,
   getWeekStart,
   parseLocalDate,
 } from "@/lib/datetime";
@@ -24,6 +26,7 @@ export default function AdminPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [bookingsUnlocked, setBookingsUnlocked] = useState(false);
+  const [adminConfigured, setAdminConfigured] = useState<boolean | null>(null);
 
   const loadAvailability = useCallback(async () => {
     const res = await fetch(
@@ -67,6 +70,15 @@ export default function AdminPage() {
     loadAvailability();
   }, [loadAvailability]);
 
+  useEffect(() => {
+    fetch("/api/health")
+      .then((res) => res.json())
+      .then((data) => {
+        setAdminConfigured(data?.checks?.adminPassword === "ok");
+      })
+      .catch(() => setAdminConfigured(null));
+  }, []);
+
   async function submitPassword(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -109,7 +121,7 @@ export default function AdminPage() {
         setError(data.error || "Could not block day.");
         return;
       }
-      setMessage(`Blocked ${selectedDate}.`);
+      setMessage(`Blocked ${formatDateUKFromIso(selectedDate)}.`);
       setReason("");
       await load();
     } catch {
@@ -138,7 +150,7 @@ export default function AdminPage() {
         setError(data.error || "Could not unblock day.");
         return;
       }
-      setMessage(`Unblocked ${date}.`);
+      setMessage(`Unblocked ${formatDateUKFromIso(date)}.`);
       await load();
     } catch {
       setError("Network error.");
@@ -155,6 +167,16 @@ export default function AdminPage() {
       <p className="mt-1 text-sm text-ink-muted">
         Block days, edit bookings, or delete bookings. Requires admin password.
       </p>
+
+      {adminConfigured === false && (
+        <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Admin password is not set on this deployment. In Vercel →{" "}
+          <strong>Settings → Environment Variables</strong>, add{" "}
+          <code className="rounded bg-amber-100 px-1">ADMIN_PASSWORD</code> (same
+          value as your local <code className="rounded bg-amber-100 px-1">.env.local</code>
+          ), enable Production and Preview, then <strong>Redeploy</strong>.
+        </p>
+      )}
 
       <form className="mt-6" onSubmit={submitPassword}>
         <label className="text-sm font-medium" htmlFor="admin-password">
@@ -192,7 +214,9 @@ export default function AdminPage() {
           ← Previous
         </button>
         <span className="text-sm font-medium">
-          {availability?.weekStart} — {availability?.weekEnd}
+          {availability
+            ? formatDateRangeUK(availability.weekStart, availability.weekEnd)
+            : formatDateUKFromIso(weekStart)}
         </span>
         <button
           type="button"
@@ -241,7 +265,7 @@ export default function AdminPage() {
             <option value="">Select date…</option>
             {weekDays.map((d) => (
               <option key={d.date} value={d.date}>
-                {d.date}
+                {formatDateUKFromIso(d.date)}
                 {d.isBlocked ? " (already blocked)" : ""}
                 {d.isShootDayCapReached ? " (2-day limit)" : ""}
               </option>
@@ -276,7 +300,7 @@ export default function AdminPage() {
               className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
             >
               <span>
-                {b.date}
+                {formatDateUKFromIso(b.date)}
                 {b.reason ? ` — ${b.reason}` : ""}
               </span>
               <button

@@ -6,6 +6,9 @@ export const OPEN_HOUR = 9;
 export const CLOSE_HOUR = 17;
 export const SLOT_MINUTES = 60;
 
+/** IANA timezone for wall-clock booking hours (GMT = UTC). */
+export const BOOKING_TIMEZONE = "UTC";
+
 export const WEEKDAY_INDICES = [1, 2, 3, 4]; // Monday–Thursday
 
 export const BRANDS: BrandOption[] = [

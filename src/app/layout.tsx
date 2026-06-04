@@ -14,8 +14,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en-GB">
+      <body className="min-h-screen bg-white">
         <header className="border-b border-zinc-200 bg-white">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
             <Link href="/" className="text-lg font-semibold tracking-tight">

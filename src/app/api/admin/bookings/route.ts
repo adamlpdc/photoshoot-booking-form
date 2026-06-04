@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWeekRangeBounds, getWeekStart, parseLocalDate, formatDateISO } from "@/lib/datetime";
 import { fetchBookingsForRange } from "@/lib/supabase-server";
-import { verifyAdminPassword, BookingValidationError } from "@/lib/validation";
+import {
+  verifyAdminPassword,
+  BookingValidationError,
+  AdminConfigError,
+} from "@/lib/validation";
 import { handleApiError, jsonError } from "@/lib/api-utils";
 
 export async function POST(request: NextRequest) {
@@ -26,6 +30,9 @@ export async function POST(request: NextRequest) {
       bookings,
     });
   } catch (err) {
+    if (err instanceof AdminConfigError) {
+      return jsonError(err.message, 503);
+    }
     if (err instanceof BookingValidationError) {
       return jsonError(err.message, 403);
     }

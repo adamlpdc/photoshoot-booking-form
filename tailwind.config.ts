@@ -10,20 +10,20 @@ const config: Config = {
     extend: {
       colors: {
         surface: {
-          DEFAULT: "#fafafa",
-          muted: "#f4f4f5",
+          DEFAULT: "#ffffff",
+          muted: "#ffffff",
         },
         ink: {
           DEFAULT: "#18181b",
           muted: "#71717a",
         },
         calendar: {
-          bg: "#f5f7fa",
+          bg: "#ffffff",
           header: "#ffffff",
-          cell: "#f5f7fa",
-          line: "#e2e8f0",
-          lineSubtle: "#eef2f6",
-          today: "#eff6ff",
+          cell: "#ffffff",
+          line: "#e4e4e7",
+          lineSubtle: "#f4f4f5",
+          today: "#f8fafc",
         },
       },
     },

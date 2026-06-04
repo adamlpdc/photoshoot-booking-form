@@ -16,7 +16,7 @@ export function ConfirmationPanel({ editLink, onDone }: ConfirmationPanelProps) 
           Your shoot is on the calendar. Save this link to edit or cancel (more
           than 24 hours before start):
         </p>
-        <p className="mt-3 break-all rounded-lg bg-zinc-50 p-3 text-sm font-mono">
+        <p className="mt-3 break-all rounded-lg border border-zinc-200 bg-white p-3 text-sm font-mono">
           {editLink}
         </p>
         <div className="mt-6 flex gap-3">

@@ -1,7 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { BRANDS, DESIGNERS } from "@/lib/constants";
-import { generateTimeOptions } from "@/lib/datetime";
+import {
+  formatDateUKFromIso,
+  generateTimeOptions,
+  parseUKDateInput,
+} from "@/lib/datetime";
 import type { BookingFormInput, BrandOption, DesignerId } from "@/lib/types";
 
 export interface BookingFormValues {
@@ -35,6 +40,14 @@ export function BookingFormFields({
     key: K,
     value: BookingFormValues[K]
   ) => onChange({ ...values, [key]: value });
+
+  const [dateText, setDateText] = useState(() =>
+    formatDateUKFromIso(values.date)
+  );
+
+  useEffect(() => {
+    setDateText(formatDateUKFromIso(values.date));
+  }, [values.date]);
 
   const inputClass =
     "mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 disabled:bg-zinc-100";
@@ -147,13 +160,29 @@ export function BookingFormFields({
       <div>
         <label className="text-sm font-medium">Date</label>
         <input
-          type="date"
+          type="text"
+          inputMode="numeric"
           className={inputClass}
           required
           disabled={disabled}
-          value={values.date}
-          onChange={(e) => set("date", e.target.value)}
+          placeholder="DD/MM/YY"
+          value={dateText}
+          onChange={(e) => {
+            setDateText(e.target.value);
+            const iso = parseUKDateInput(e.target.value);
+            if (iso) set("date", iso);
+          }}
+          onBlur={() => {
+            const iso = parseUKDateInput(dateText);
+            if (iso) {
+              set("date", iso);
+              setDateText(formatDateUKFromIso(iso));
+            } else {
+              setDateText(formatDateUKFromIso(values.date));
+            }
+          }}
         />
+        <p className="mt-1 text-xs text-ink-muted">UK format (DD/MM/YY), GMT</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

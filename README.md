@@ -14,7 +14,8 @@ Internal no-login booking calendar for studio photoshoots (Monday–Thursday, 9 
 | Rule | Behavior |
 |------|----------|
 | Days | Monday–Thursday only |
-| Hours | 9:00 AM–5:00 PM |
+| Dates | UK format **DD/MM/YY** (stored as ISO internally) |
+| Hours | 9:00 AM–5:00 PM **GMT** (UTC) |
 | Increments | 1 hour (on the hour) |
 | Studio capacity | One shoot at a time (global) |
 | Weekly cap | **Max 2 shoot days per week** (shared across Edi and Sol) |
@@ -84,7 +85,6 @@ git push -u origin main
 | `SUPABASE_SERVICE_ROLE_KEY` | service_role secret |
 | `ADMIN_PASSWORD` | Your admin password for `/admin` |
 | `NEXT_PUBLIC_APP_URL` | `https://YOUR_PROJECT.vercel.app` (set after first deploy, then redeploy) |
-
 4. Deploy. Copy the production URL, set `NEXT_PUBLIC_APP_URL` to that URL, **Redeploy** so booking edit links work.
 
 ## Pages

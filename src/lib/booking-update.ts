@@ -1,3 +1,4 @@
+import { formatDateISO, formatTimeInput } from "./datetime";
 import type { BookingFormInput } from "./types";
 import type { Booking } from "./types";
 
@@ -8,10 +9,6 @@ export function bookingToFormInput(booking: Booking): BookingFormInput & {
 } {
   const start = new Date(booking.start_time);
   const end = new Date(booking.end_time);
-  const y = start.getFullYear();
-  const m = String(start.getMonth() + 1).padStart(2, "0");
-  const d = String(start.getDate()).padStart(2, "0");
-  const hh = (n: number) => String(n).padStart(2, "0");
 
   return {
     brand: booking.brand as BookingFormInput["brand"],
@@ -22,9 +19,9 @@ export function bookingToFormInput(booking: Booking): BookingFormInput & {
     description: booking.description ?? undefined,
     requesterName: booking.requester_name,
     requesterEmail: booking.requester_email,
-    date: `${y}-${m}-${d}`,
-    startTime: `${hh(start.getHours())}:${hh(start.getMinutes())}`,
-    endTime: `${hh(end.getHours())}:${hh(end.getMinutes())}`,
+    date: formatDateISO(start),
+    startTime: formatTimeInput(start),
+    endTime: formatTimeInput(end),
   };
 }
 

@@ -4,6 +4,6 @@
 
 @layer base {
   body {
-    @apply bg-surface text-ink antialiased;
+    @apply bg-white text-ink antialiased;
   }
 }

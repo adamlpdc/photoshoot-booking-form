@@ -3,9 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   addDays,
+  combineDateAndTime,
   formatDateISO,
+  formatDateRangeUK,
+  formatDateUKFromIso,
   formatTimeInput,
+  formatTimeLabel,
+  formatWeekdayShort,
   getWeekStart,
+  minutesFromMidnight,
   parseLocalDate,
 } from "@/lib/datetime";
 import { OPEN_HOUR, CLOSE_HOUR, SLOT_MINUTES } from "@/lib/constants";
@@ -67,10 +73,12 @@ function defaultFormValues(
 function bookingPosition(
   start: Date,
   end: Date,
-  dayStart: Date
+  dateStr: string
 ): { top: number; height: number } | null {
-  const dayOpen = new Date(dayStart);
-  dayOpen.setHours(OPEN_HOUR, 0, 0, 0);
+  const dayOpen = combineDateAndTime(
+    dateStr,
+    `${String(OPEN_HOUR).padStart(2, "0")}:00`
+  );
   const startMin =
     (start.getTime() - dayOpen.getTime()) / (SLOT_MINUTES * 60 * 1000);
   const endMin =
@@ -163,12 +171,12 @@ export function WeeklyCalendar() {
   }, [availability]);
 
   const currentTimeTop = useMemo(() => {
-    const hour = now.getHours();
-    const minute = now.getMinutes();
-    if (hour < OPEN_HOUR || hour > CLOSE_HOUR) return null;
-    if (hour === CLOSE_HOUR && minute > 0) return null;
-    const mins = (hour - OPEN_HOUR) * 60 + minute;
-    return (mins / SLOT_MINUTES) * ROW_HEIGHT;
+    const total = minutesFromMidnight(now);
+    const open = OPEN_HOUR * 60;
+    const close = CLOSE_HOUR * 60;
+    if (total < open || total > close) return null;
+    if (total === close) return null;
+    return ((total - open) / SLOT_MINUTES) * ROW_HEIGHT;
   }, [now]);
 
   function shiftWeek(delta: number) {
@@ -202,8 +210,8 @@ export function WeeklyCalendar() {
   }
 
   const weekLabel = availability
-    ? `${availability.weekStart} — ${availability.weekEnd}`
-    : weekStart;
+    ? formatDateRangeUK(availability.weekStart, availability.weekEnd)
+    : formatDateUKFromIso(weekStart);
 
   const isViewingToday = grid.some(({ date }) => date === todayIso);
 
@@ -215,7 +223,7 @@ export function WeeklyCalendar() {
             Calendar
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
-            Monday–Thursday · 9:00 AM–5:00 PM · hourly slots
+            Monday–Thursday · 9:00 AM–5:00 PM GMT · hourly slots
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -292,9 +300,7 @@ export function WeeklyCalendar() {
                 {grid.map(({ date }) => {
                   const d = parseLocalDate(date);
                   const isToday = date === todayIso;
-                  const dayName = d
-                    .toLocaleDateString("en-US", { weekday: "short" })
-                    .toUpperCase();
+                  const dayName = formatWeekdayShort(d);
                   const dayInfo = dayMap.get(date);
                   return (
                     <div
@@ -307,11 +313,11 @@ export function WeeklyCalendar() {
                         {dayName}
                       </p>
                       <p
-                        className={`mt-0.5 text-xl font-semibold leading-none ${
+                        className={`mt-0.5 text-lg font-semibold leading-none ${
                           isToday ? "text-sky-600" : "text-ink"
                         }`}
                       >
-                        {d.getDate()}
+                        {formatDateUKFromIso(date)}
                       </p>
                       {dayInfo?.isBlocked && (
                         <span className="mt-1.5 block text-[10px] font-medium text-amber-700">
@@ -343,11 +349,7 @@ export function WeeklyCalendar() {
                       }}
                     >
                         <span className="-translate-y-1.5">
-                          {slot.toLocaleTimeString("en-US", {
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          })}
+                          {formatTimeLabel(slot)}
                       </span>
                     </div>
                 ))}
@@ -365,10 +367,10 @@ export function WeeklyCalendar() {
                       key={date}
                       className={`relative border-l border-calendar-line ${
                         dayInfo?.isShootDayCapReached
-                          ? "bg-zinc-200/50"
+                          ? "bg-zinc-100"
                           : isToday
-                            ? "bg-calendar-today/50 bg-calendar-cell"
-                            : "bg-calendar-cell"
+                            ? "bg-calendar-today"
+                            : "bg-white"
                       }`}
                       style={{ height: SLOT_COUNT * ROW_HEIGHT }}
                     >
@@ -404,11 +406,7 @@ export function WeeklyCalendar() {
                       {dayBookings.map((booking) => {
                         const start = new Date(booking.start_time);
                         const end = new Date(booking.end_time);
-                        const pos = bookingPosition(
-                          start,
-                          end,
-                          parseLocalDate(date)
-                        );
+                        const pos = bookingPosition(start, end, date);
                         if (!pos) return null;
                         return (
                           <BookingCard

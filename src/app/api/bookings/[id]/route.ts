@@ -21,6 +21,7 @@ import {
   validateAdminBookingUpdate,
   validateBookingUpdate,
   verifyAdminPassword,
+  AdminConfigError,
   BookingValidationError,
 } from "@/lib/validation";
 import { handleApiError, jsonError } from "@/lib/api-utils";
@@ -109,6 +110,9 @@ export async function PATCH(
       editLink,
     });
   } catch (err) {
+    if (err instanceof AdminConfigError) {
+      return jsonError(err.message, 503);
+    }
     if (err instanceof BookingValidationError) {
       return jsonError(err.message, 400);
     }
@@ -165,6 +169,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (err) {
+    if (err instanceof AdminConfigError) {
+      return jsonError(err.message, 503);
+    }
     if (err instanceof BookingValidationError) {
       return jsonError(err.message, 400);
     }

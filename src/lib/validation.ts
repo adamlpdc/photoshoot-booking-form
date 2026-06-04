@@ -249,12 +249,21 @@ export function assertCanCancel(start: Date): void {
   }
 }
 
-export function verifyAdminPassword(password: string): void {
-  const expected = process.env.ADMIN_PASSWORD;
-  if (!expected) {
-    throw new Error("ADMIN_PASSWORD is not configured on the server.");
+export class AdminConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminConfigError";
   }
-  if (password !== expected) {
+}
+
+export function verifyAdminPassword(password: string): void {
+  const expected = process.env.ADMIN_PASSWORD?.trim();
+  if (!expected) {
+    throw new AdminConfigError(
+      "Admin password is not configured on the server. Add ADMIN_PASSWORD in Vercel → Settings → Environment Variables, then redeploy."
+    );
+  }
+  if (password.trim() !== expected) {
     throw new BookingValidationError("Incorrect admin password.");
   }
 }

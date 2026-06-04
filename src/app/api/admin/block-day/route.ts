@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { formatDateISO, isWeekdayBookable, parseLocalDate } from "@/lib/datetime";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 import {
+  AdminConfigError,
   BookingValidationError,
   verifyAdminPassword,
 } from "@/lib/validation";
@@ -47,6 +48,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ blockedDay: data });
   } catch (err) {
+    if (err instanceof AdminConfigError) {
+      return jsonError(err.message, 503);
+    }
     if (err instanceof BookingValidationError) {
       return jsonError(err.message, 403);
     }
@@ -77,6 +81,9 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
+    if (err instanceof AdminConfigError) {
+      return jsonError(err.message, 503);
+    }
     if (err instanceof BookingValidationError) {
       return jsonError(err.message, 403);
     }

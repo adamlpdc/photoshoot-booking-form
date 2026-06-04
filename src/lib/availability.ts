@@ -1,5 +1,6 @@
 import { CLOSE_HOUR, OPEN_HOUR, SLOT_MINUTES } from "./constants";
 import {
+  combineDateAndTime,
   formatDateISO,
   getWeekDates,
   getWeekStart,
@@ -76,27 +77,19 @@ export function getSlotStatus(
 
 export function buildWeekSlotGrid(weekStart: Date): { date: string; slots: Date[] }[] {
   const weekDates = getWeekDates(weekStart);
-  const slots: Date[] = [];
+  const timeLabels: string[] = [];
 
   for (let h = OPEN_HOUR; h < CLOSE_HOUR; h++) {
     for (let m = 0; m < 60; m += SLOT_MINUTES) {
-      slots.push(new Date(2000, 0, 1, h, m, 0, 0));
+      const hh = String(h).padStart(2, "0");
+      const mm = String(m).padStart(2, "0");
+      timeLabels.push(`${hh}:${mm}`);
     }
   }
 
   return weekDates.map((day) => {
     const date = formatDateISO(day);
-    const daySlots = slots.map((t) => {
-      return new Date(
-        day.getFullYear(),
-        day.getMonth(),
-        day.getDate(),
-        t.getHours(),
-        t.getMinutes(),
-        0,
-        0
-      );
-    });
+    const daySlots = timeLabels.map((time) => combineDateAndTime(date, time));
     return { date, slots: daySlots };
   });
 }
