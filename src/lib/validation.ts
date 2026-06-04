@@ -59,7 +59,7 @@ export function validateBookingTimes(
 
   if (!isAlignedToSlot(start) || !isAlignedToSlot(end)) {
     throw new BookingValidationError(
-      "Start and end times must use 15-minute increments."
+      "Start and end times must be on the hour (e.g. 9:00, 10:00)."
     );
   }
 

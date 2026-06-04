@@ -22,10 +22,10 @@ import { ConfirmationPanel } from "./ConfirmationPanel";
 import type { BookingFormValues } from "./BookingFormFields";
 
 const SLOT_COUNT = ((CLOSE_HOUR - OPEN_HOUR) * 60) / SLOT_MINUTES;
-const ROW_HEIGHT = 24;
+const ROW_HEIGHT = 48;
 
 function slotRowClass(status: SlotStatus, slotIndex: number): string {
-  const isHourLine = slotIndex % 4 === 0;
+  const isHourLine = true;
   const border = isHourLine
     ? "border-b border-calendar-line"
     : "border-b border-calendar-lineSubtle";
@@ -103,7 +103,7 @@ export function WeeklyCalendar() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [formInitial, setFormInitial] = useState<BookingFormValues>(
-    defaultFormValues(weekStart, "09:00", "09:30")
+    defaultFormValues(weekStart, "09:00", "10:00")
   );
   const [confirmLink, setConfirmLink] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -215,7 +215,7 @@ export function WeeklyCalendar() {
             Calendar
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
-            Monday–Thursday · 9:00 AM–5:00 PM · 15-minute slots
+            Monday–Thursday · 9:00 AM–5:00 PM · hourly slots
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -333,27 +333,24 @@ export function WeeklyCalendar() {
                   className="relative border-r border-calendar-line bg-calendar-header"
                   style={{ height: SLOT_COUNT * ROW_HEIGHT }}
                 >
-                  {grid[0].slots.map((slot, i) => {
-                    if (slot.getMinutes() % 30 !== 0) return null;
-                    return (
-                      <div
-                        key={i}
-                        className="absolute right-0 left-0 flex items-start justify-end border-b border-calendar-lineSubtle pr-2 text-[10px] font-medium text-zinc-500"
-                        style={{
-                          top: i * ROW_HEIGHT,
-                          height: ROW_HEIGHT * 2,
-                        }}
-                      >
+                {grid[0].slots.map((slot, i) => (
+                    <div
+                      key={i}
+                      className="absolute right-0 left-0 flex items-start justify-end border-b border-calendar-lineSubtle pr-2 text-[10px] font-medium text-zinc-500"
+                      style={{
+                        top: i * ROW_HEIGHT,
+                        height: ROW_HEIGHT,
+                      }}
+                    >
                         <span className="-translate-y-1.5">
                           {slot.toLocaleTimeString("en-US", {
                             hour: "numeric",
                             minute: "2-digit",
                             hour12: true,
                           })}
-                        </span>
-                      </div>
-                    );
-                  })}
+                      </span>
+                    </div>
+                ))}
                 </div>
 
                 {grid.map(({ date, slots }) => {

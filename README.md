@@ -15,7 +15,7 @@ Internal no-login booking calendar for studio photoshoots (Monday–Thursday, 9 
 |------|----------|
 | Days | Monday–Thursday only |
 | Hours | 9:00 AM–5:00 PM |
-| Increments | 15 minutes |
+| Increments | 1 hour (on the hour) |
 | Studio capacity | One shoot at a time (global) |
 | Weekly cap | **Max 2 shoot days per week** (shared across Edi and Sol) |
 | Confirmation | Instant |
