@@ -7,7 +7,8 @@ import {
   getWeekStart,
   parseLocalDate,
 } from "@/lib/datetime";
-import type { AvailabilityResponse } from "@/lib/types";
+import type { AvailabilityResponse, Booking } from "@/lib/types";
+import { AdminBookingPanel } from "@/components/AdminBookingPanel";
 
 export default function AdminPage() {
   const [weekStart, setWeekStart] = useState(() =>
@@ -15,14 +16,16 @@ export default function AdminPage() {
   );
   const [availability, setAvailability] =
     useState<AvailabilityResponse | null>(null);
+  const [adminBookings, setAdminBookings] = useState<Booking[]>([]);
   const [password, setPassword] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [bookingsUnlocked, setBookingsUnlocked] = useState(false);
 
-  const load = useCallback(async () => {
+  const loadAvailability = useCallback(async () => {
     const res = await fetch(
       `/api/availability?weekStart=${encodeURIComponent(weekStart)}`
     );
@@ -30,14 +33,58 @@ export default function AdminPage() {
     if (res.ok) setAvailability(data);
   }, [weekStart]);
 
+  const loadBookings = useCallback(async () => {
+    if (!password) {
+      setError("Enter the admin password.");
+      return false;
+    }
+    const res = await fetch("/api/admin/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password, weekStart }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setAdminBookings([]);
+      setBookingsUnlocked(false);
+      setError(data.error || "Could not load bookings. Check your password.");
+      return false;
+    }
+    setAdminBookings(data.bookings ?? []);
+    setBookingsUnlocked(true);
+    setError(null);
+    return true;
+  }, [password, weekStart]);
+
+  const load = useCallback(async () => {
+    await loadAvailability();
+    if (bookingsUnlocked) {
+      await loadBookings();
+    }
+  }, [loadAvailability, loadBookings, bookingsUnlocked]);
+
   useEffect(() => {
-    load();
-  }, [load]);
+    loadAvailability();
+  }, [loadAvailability]);
+
+  async function submitPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setMessage(null);
+    await loadBookings();
+    setLoading(false);
+  }
 
   function shiftWeek(delta: number) {
     const next = addDays(parseLocalDate(weekStart), delta * 7);
     setWeekStart(formatDateISO(getWeekStart(next)));
   }
+
+  useEffect(() => {
+    if (bookingsUnlocked) {
+      loadBookings();
+    }
+  }, [weekStart, bookingsUnlocked, loadBookings]);
 
   async function blockDay() {
     if (!selectedDate || !password) {
@@ -74,7 +121,7 @@ export default function AdminPage() {
 
   async function unblockDay(date: string) {
     if (!password) {
-      setError("Enter the admin password to unblock a day.");
+      setError("Enter the admin password.");
       return;
     }
     setLoading(true);
@@ -103,23 +150,38 @@ export default function AdminPage() {
   const weekDays = availability?.days ?? [];
 
   return (
-    <div className="mx-auto max-w-xl">
-      <h1 className="text-2xl font-semibold">Admin — block days</h1>
+    <div className="mx-auto max-w-2xl">
+      <h1 className="text-2xl font-semibold">Admin</h1>
       <p className="mt-1 text-sm text-ink-muted">
-        Block full shoot days (Monday–Thursday). Password is never stored in
-        the app — only verified on the server.
+        Block days, edit bookings, or delete bookings. Requires admin password.
       </p>
 
-      <div className="mt-6">
-        <label className="text-sm font-medium">Admin password</label>
-        <input
-          type="password"
-          className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="current-password"
-        />
-      </div>
+      <form className="mt-6" onSubmit={submitPassword}>
+        <label className="text-sm font-medium" htmlFor="admin-password">
+          Admin password
+        </label>
+        <div className="mt-1 flex gap-2">
+          <input
+            id="admin-password"
+            type="password"
+            className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setBookingsUnlocked(false);
+              setAdminBookings([]);
+            }}
+            autoComplete="current-password"
+          />
+          <button
+            type="submit"
+            disabled={loading || !password}
+            className="shrink-0 rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+          >
+            {loading ? "Loading…" : "Load week"}
+          </button>
+        </div>
+      </form>
 
       <div className="mt-6 flex items-center gap-2">
         <button
@@ -152,6 +214,22 @@ export default function AdminPage() {
         </p>
       )}
 
+      {bookingsUnlocked && (
+        <div className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
+          <h2 className="text-sm font-semibold">
+            Bookings this week ({adminBookings.length})
+          </h2>
+          <p className="mt-1 text-xs text-ink-muted">
+            Edit or delete any booking below.
+          </p>
+          <AdminBookingPanel
+            password={password}
+            bookings={adminBookings}
+            onChanged={load}
+          />
+        </div>
+      )}
+
       <div className="mt-8 rounded-xl border border-zinc-200 bg-white p-4">
         <h2 className="text-sm font-semibold">Block a day</h2>
         <div className="mt-3 grid gap-3">
@@ -165,6 +243,7 @@ export default function AdminPage() {
               <option key={d.date} value={d.date}>
                 {d.date}
                 {d.isBlocked ? " (already blocked)" : ""}
+                {d.isShootDayCapReached ? " (2-day limit)" : ""}
               </option>
             ))}
           </select>

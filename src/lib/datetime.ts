@@ -13,14 +13,20 @@ export function formatDateISO(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-/** Monday of the week containing `date` (local time). */
+/** Monday 00:00 local — week boundaries for bookings and availability. */
 export function getWeekStart(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(12, 0, 0, 0);
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
   const day = d.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   return d;
+}
+
+/** Inclusive Mon–Thu dates and exclusive end (next Monday) for range queries. */
+export function getWeekRangeBounds(anchor: Date): { start: Date; end: Date } {
+  const start = getWeekStart(anchor);
+  const end = addDays(start, 7);
+  return { start, end };
 }
 
 export function addDays(date: Date, days: number): Date {

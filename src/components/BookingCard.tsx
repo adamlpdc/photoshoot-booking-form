@@ -12,31 +12,44 @@ export function BookingCard({ booking, style }: BookingCardProps) {
   const end = new Date(booking.end_time);
   const brand = displayBrand(booking.brand, booking.custom_brand);
   const theme = getDesignerStyles(booking.designer);
-  const compact = (style.height as number) < 48;
+  const height =
+    typeof style.height === "number" ? style.height : parseFloat(String(style.height));
+  const compact = height < 52;
 
   return (
     <div
-      className={`pointer-events-none absolute inset-x-1.5 z-20 flex min-h-0 overflow-hidden rounded-lg border border-black/[0.06] shadow-sm ${theme.bg}`}
-      style={style}
+      className="pointer-events-none absolute inset-x-1 z-30 flex min-h-[20px] overflow-hidden rounded-md border border-black/10 shadow-md"
+      style={{
+        ...style,
+        backgroundColor: theme.fill,
+      }}
       title={`${brand} · ${booking.designer}`}
     >
-      <div className={`w-1 shrink-0 rounded-l-lg ${theme.accent}`} aria-hidden />
-      <div className={`flex min-w-0 flex-1 flex-col justify-center px-2 py-1 ${compact ? "py-0.5" : "py-1.5"}`}>
-        <p className={`truncate text-xs font-semibold leading-tight ${theme.text}`}>
+      <div
+        className="w-1.5 shrink-0"
+        style={{ backgroundColor: theme.accent }}
+        aria-hidden
+      />
+      <div
+        className={`flex min-w-0 flex-1 flex-col justify-center px-2 ${
+          compact ? "py-0.5" : "py-1.5"
+        }`}
+      >
+        <p className={`truncate text-xs font-semibold leading-tight ${theme.textClass}`}>
           {brand}
         </p>
         {!compact && (
           <>
-            <p className={`truncate text-[11px] leading-tight ${theme.muted}`}>
+            <p className={`truncate text-[11px] leading-tight ${theme.mutedClass}`}>
               {formatTimeLabel(start)} – {formatTimeLabel(end)}
             </p>
-            <p className={`truncate text-[11px] leading-tight ${theme.muted}`}>
+            <p className={`truncate text-[11px] leading-tight ${theme.mutedClass}`}>
               {booking.designer}
             </p>
           </>
         )}
         {compact && (
-          <p className={`truncate text-[10px] leading-tight ${theme.muted}`}>
+          <p className={`truncate text-[10px] leading-tight ${theme.mutedClass}`}>
             {formatTimeLabel(start)} · {booking.designer}
           </p>
         )}

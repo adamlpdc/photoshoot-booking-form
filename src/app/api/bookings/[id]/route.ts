@@ -6,6 +6,7 @@ import {
   parseLocalDate,
 } from "@/lib/datetime";
 import { sendBookingNotifications } from "@/lib/notifications";
+import { buildBookingUpdateRow } from "@/lib/booking-update";
 import {
   fetchBlockedDaysInRange,
   fetchBookingById,
@@ -17,7 +18,9 @@ import { getEditLink } from "@/lib/tokens";
 import type { BookingFormInput } from "@/lib/types";
 import {
   assertCanCancel,
+  validateAdminBookingUpdate,
   validateBookingUpdate,
+  verifyAdminPassword,
   BookingValidationError,
 } from "@/lib/validation";
 import { handleApiError, jsonError } from "@/lib/api-utils";
@@ -45,42 +48,48 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = (await request.json()) as BookingFormInput & {
-      editToken: string;
+      editToken?: string;
+      adminPassword?: string;
     };
 
-    if (!body.editToken) {
-      return jsonError("Edit token is required.");
+    const existing = await fetchBookingById(id);
+    if (!existing) {
+      return jsonError("Booking not found.", 404);
     }
 
-    const existing = await fetchBookingById(id);
-    if (!existing || existing.edit_token !== body.editToken) {
-      return jsonError("Booking not found or invalid edit token.", 404);
+    const isAdmin =
+      !!body.adminPassword &&
+      (() => {
+        try {
+          verifyAdminPassword(body.adminPassword!);
+          return true;
+        } catch (e) {
+          if (e instanceof BookingValidationError) return false;
+          throw e;
+        }
+      })();
+
+    if (!isAdmin) {
+      if (!body.editToken || existing.edit_token !== body.editToken) {
+        return jsonError("Booking not found or invalid edit token.", 404);
+      }
     }
 
     const { bookings, blockedDates } = await loadWeekContext(body.date);
-    const { brand, custom_brand, start, end } = validateBookingUpdate(
-      body,
-      bookings,
-      blockedDates,
-      id,
-      new Date(existing.start_time)
-    );
+    const validated = isAdmin
+      ? validateAdminBookingUpdate(body, bookings, blockedDates, id)
+      : validateBookingUpdate(
+          body,
+          bookings,
+          blockedDates,
+          id,
+          new Date(existing.start_time)
+        );
 
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("bookings")
-      .update({
-        brand,
-        custom_brand,
-        title: body.title.trim(),
-        designer: body.designer,
-        attendees: body.attendees.trim(),
-        description: body.description?.trim() || null,
-        requester_name: body.requesterName.trim(),
-        requester_email: body.requesterEmail.trim(),
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
-      })
+      .update(buildBookingUpdateRow(body, validated))
       .eq("id", id)
       .select("*")
       .single();
@@ -96,7 +105,7 @@ export async function PATCH(
     });
 
     return NextResponse.json({
-      booking: toPublicBooking(data),
+      booking: isAdmin ? data : toPublicBooking(data),
       editLink,
     });
   } catch (err) {
@@ -113,18 +122,34 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const body = (await request.json()) as { editToken: string };
-
-    if (!body.editToken) {
-      return jsonError("Edit token is required.");
-    }
+    const body = (await request.json()) as {
+      editToken?: string;
+      adminPassword?: string;
+    };
 
     const existing = await fetchBookingById(id);
-    if (!existing || existing.edit_token !== body.editToken) {
-      return jsonError("Booking not found or invalid edit token.", 404);
+    if (!existing) {
+      return jsonError("Booking not found.", 404);
     }
 
-    assertCanCancel(new Date(existing.start_time));
+    const isAdmin =
+      !!body.adminPassword &&
+      (() => {
+        try {
+          verifyAdminPassword(body.adminPassword!);
+          return true;
+        } catch (e) {
+          if (e instanceof BookingValidationError) return false;
+          throw e;
+        }
+      })();
+
+    if (!isAdmin) {
+      if (!body.editToken || existing.edit_token !== body.editToken) {
+        return jsonError("Booking not found or invalid edit token.", 404);
+      }
+      assertCanCancel(new Date(existing.start_time));
+    }
 
     const supabase = getSupabaseAdmin();
     const { error } = await supabase.from("bookings").delete().eq("id", id);

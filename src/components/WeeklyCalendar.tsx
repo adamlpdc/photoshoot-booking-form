@@ -34,13 +34,13 @@ function slotRowClass(status: SlotStatus, slotIndex: number): string {
 
   switch (status) {
     case "available":
-      return `${base} cursor-pointer bg-transparent hover:bg-sky-200/80 active:bg-sky-300/70`;
+      return `${base} cursor-pointer bg-transparent hover:bg-zinc-300/60 active:bg-zinc-400/40`;
     case "booked":
       return `${base} cursor-default bg-transparent pointer-events-none`;
     case "blocked":
-      return `${base} cursor-not-allowed bg-amber-50/70`;
+      return `${base} cursor-not-allowed bg-amber-50/80`;
     case "unavailable":
-      return `${base} cursor-not-allowed bg-zinc-100/50`;
+      return `${base} cursor-not-allowed bg-zinc-200/80`;
   }
 }
 
@@ -318,11 +318,11 @@ export function WeeklyCalendar() {
                           Blocked
                         </span>
                       )}
-                      {dayInfo?.isShootDayCapReached && (
-                        <span className="mt-1 block text-[10px] text-zinc-500">
-                          Week cap
-                        </span>
-                      )}
+                    {dayInfo?.isShootDayCapReached && (
+                      <span className="mt-1 block text-[10px] font-medium text-zinc-600">
+                        2-day limit
+                      </span>
+                    )}
                     </div>
                   );
                 })}
@@ -367,7 +367,11 @@ export function WeeklyCalendar() {
                     <div
                       key={date}
                       className={`relative border-l border-calendar-line ${
-                        isToday ? "bg-calendar-today/40" : "bg-calendar-cell"
+                        dayInfo?.isShootDayCapReached
+                          ? "bg-zinc-200/50"
+                          : isToday
+                            ? "bg-calendar-today/50 bg-calendar-cell"
+                            : "bg-calendar-cell"
                       }`}
                       style={{ height: SLOT_COUNT * ROW_HEIGHT }}
                     >

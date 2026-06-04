@@ -1,5 +1,5 @@
 import { MAX_SHOOT_DAYS_PER_WEEK } from "./constants";
-import { formatDateISO, getWeekStart, parseLocalDate } from "./datetime";
+import { formatDateISO, getWeekDates, getWeekStart, parseLocalDate } from "./datetime";
 import type { Booking } from "./types";
 
 /**
@@ -19,14 +19,15 @@ export function getShootDaysInWeek(
   weekStartDate: Date
 ): Set<string> {
   const weekStart = getWeekStart(weekStartDate);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 7);
+  const weekDateSet = new Set(
+    getWeekDates(weekStart).map((d) => formatDateISO(d))
+  );
 
   const days = new Set<string>();
   for (const b of bookings) {
-    const start = new Date(b.start_time);
-    if (start >= weekStart && start < weekEnd) {
-      days.add(formatDateISO(start));
+    const date = formatDateISO(new Date(b.start_time));
+    if (weekDateSet.has(date)) {
+      days.add(date);
     }
   }
   return days;

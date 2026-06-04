@@ -141,24 +141,17 @@ export function validateNewBooking(
   return { ...brandFields, start, end };
 }
 
-export function validateBookingUpdate(
+function validateBookingMutation(
   input: BookingFormInput,
   existingBookings: Booking[],
   blockedDates: Set<string>,
-  bookingId: string,
-  currentStart: Date
+  bookingId?: string
 ): {
   brand: string;
   custom_brand: string | null;
   start: Date;
   end: Date;
 } {
-  if (!canModifyBooking(currentStart)) {
-    throw new BookingValidationError(
-      "Bookings can only be edited or cancelled more than 24 hours before the start time."
-    );
-  }
-
   const brandFields = assertBrand(input);
   assertDesigner(input.designer);
 
@@ -194,7 +187,7 @@ export function validateBookingUpdate(
   }
 
   const overlap = existingBookings.some((b) => {
-    if (b.id === bookingId) return false;
+    if (bookingId && b.id === bookingId) return false;
     const bStart = new Date(b.start_time);
     const bEnd = new Date(b.end_time);
     return start < bEnd && end > bStart;
@@ -207,6 +200,45 @@ export function validateBookingUpdate(
   }
 
   return { ...brandFields, start, end };
+}
+
+export function validateBookingUpdate(
+  input: BookingFormInput,
+  existingBookings: Booking[],
+  blockedDates: Set<string>,
+  bookingId: string,
+  currentStart: Date
+): {
+  brand: string;
+  custom_brand: string | null;
+  start: Date;
+  end: Date;
+} {
+  if (!canModifyBooking(currentStart)) {
+    throw new BookingValidationError(
+      "Bookings can only be edited or cancelled more than 24 hours before the start time."
+    );
+  }
+  return validateBookingMutation(
+    input,
+    existingBookings,
+    blockedDates,
+    bookingId
+  );
+}
+
+export function validateAdminBookingUpdate(
+  input: BookingFormInput,
+  existingBookings: Booking[],
+  blockedDates: Set<string>,
+  bookingId: string
+) {
+  return validateBookingMutation(
+    input,
+    existingBookings,
+    blockedDates,
+    bookingId
+  );
 }
 
 export function assertCanCancel(start: Date): void {

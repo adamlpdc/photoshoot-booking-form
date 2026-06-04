@@ -1,31 +1,33 @@
 import type { DesignerId } from "./types";
 
-export const DESIGNER_EVENT_STYLES: Record<
-  DesignerId,
-  { bg: string; accent: string; text: string; muted: string }
-> = {
+export type DesignerEventStyle = {
+  fill: string;
+  accent: string;
+  textClass: string;
+  mutedClass: string;
+};
+
+/** Solid fills for booking blocks (inline styles — always visible in dev). */
+export const DESIGNER_EVENT_STYLES: Record<DesignerId, DesignerEventStyle> = {
   Edi: {
-    bg: "bg-sky-100",
-    accent: "bg-sky-500",
-    text: "text-sky-950",
-    muted: "text-sky-800/80",
+    fill: "#93c5fd",
+    accent: "#2563eb",
+    textClass: "text-blue-950",
+    mutedClass: "text-blue-900",
   },
   Sol: {
-    bg: "bg-violet-100",
-    accent: "bg-violet-500",
-    text: "text-violet-950",
-    muted: "text-violet-800/80",
+    fill: "#fda4af",
+    accent: "#e11d48",
+    textClass: "text-rose-950",
+    mutedClass: "text-rose-900",
   },
 };
 
-export function getDesignerStyles(designer: string) {
-  if (designer === "Edi" || designer === "Sol") {
-    return DESIGNER_EVENT_STYLES[designer];
-  }
-  return {
-    bg: "bg-zinc-100",
-    accent: "bg-zinc-400",
-    text: "text-zinc-900",
-    muted: "text-zinc-600",
-  };
+const DEFAULT_BOOKING_STYLE = DESIGNER_EVENT_STYLES.Edi;
+
+export function getDesignerStyles(designer: string): DesignerEventStyle {
+  const key = designer.trim();
+  if (key === "Edi") return DESIGNER_EVENT_STYLES.Edi;
+  if (key === "Sol") return DESIGNER_EVENT_STYLES.Sol;
+  return DEFAULT_BOOKING_STYLE;
 }
