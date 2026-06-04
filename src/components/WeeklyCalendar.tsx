@@ -82,15 +82,28 @@ export function WeeklyCalendar() {
     defaultFormValues(weekStart, "09:00", "09:30")
   );
   const [confirmLink, setConfirmLink] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await fetch(
         `/api/availability?weekStart=${encodeURIComponent(weekStart)}`
       );
       const data = await res.json();
-      if (res.ok) setAvailability(data);
+      if (res.ok) {
+        setAvailability(data);
+        return;
+      }
+      setAvailability(null);
+      setLoadError(
+        data.error ||
+          "Could not load the calendar. Check server environment variables on Vercel."
+      );
+    } catch {
+      setAvailability(null);
+      setLoadError("Network error loading the calendar. Please refresh.");
     } finally {
       setLoading(false);
     }
@@ -186,6 +199,30 @@ export function WeeklyCalendar() {
 
       {loading && (
         <p className="mt-8 text-sm text-ink-muted">Loading calendar…</p>
+      )}
+
+      {!loading && loadError && (
+        <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <p className="font-medium">Calendar could not load</p>
+          <p className="mt-1">{loadError}</p>
+          <p className="mt-3 text-red-700">
+            On Vercel, add{" "}
+            <code className="rounded bg-red-100 px-1">
+              NEXT_PUBLIC_SUPABASE_URL
+            </code>
+            ,{" "}
+            <code className="rounded bg-red-100 px-1">
+              SUPABASE_SERVICE_ROLE_KEY
+            </code>
+            , and{" "}
+            <code className="rounded bg-red-100 px-1">ADMIN_PASSWORD</code> in
+            Project Settings → Environment Variables, then redeploy. Check{" "}
+            <a href="/api/health" className="underline">
+              /api/health
+            </a>
+            .
+          </p>
+        </div>
       )}
 
       {!loading && availability && (
