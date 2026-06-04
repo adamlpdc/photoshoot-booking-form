@@ -17,11 +17,13 @@ const config: Config = {
           DEFAULT: "#18181b",
           muted: "#71717a",
         },
-        slot: {
-          available: "#ecfdf5",
-          booked: "#dbeafe",
-          blocked: "#fef3c7",
-          unavailable: "#f4f4f5",
+        calendar: {
+          bg: "#f5f7fa",
+          header: "#ffffff",
+          cell: "#f5f7fa",
+          line: "#e2e8f0",
+          lineSubtle: "#eef2f6",
+          today: "#eff6ff",
         },
       },
     },

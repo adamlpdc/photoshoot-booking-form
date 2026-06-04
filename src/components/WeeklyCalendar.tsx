@@ -20,18 +20,29 @@ import { CalendarLegend } from "./CalendarLegend";
 import { BookingModal } from "./BookingModal";
 import { ConfirmationPanel } from "./ConfirmationPanel";
 import type { BookingFormValues } from "./BookingFormFields";
-const SLOT_COUNT =
-  ((CLOSE_HOUR - OPEN_HOUR) * 60) / SLOT_MINUTES;
-const ROW_HEIGHT = 20;
 
-const slotStatusClass: Record<SlotStatus, string> = {
-  available:
-    "bg-slot-available hover:bg-emerald-100 border-emerald-100 cursor-pointer",
-  booked: "bg-slot-booked border-blue-100 cursor-default",
-  blocked: "bg-slot-blocked border-amber-100 cursor-not-allowed",
-  unavailable:
-    "bg-slot-unavailable border-zinc-100 cursor-not-allowed opacity-70",
-};
+const SLOT_COUNT = ((CLOSE_HOUR - OPEN_HOUR) * 60) / SLOT_MINUTES;
+const ROW_HEIGHT = 24;
+
+function slotRowClass(status: SlotStatus, slotIndex: number): string {
+  const isHourLine = slotIndex % 4 === 0;
+  const border = isHourLine
+    ? "border-b border-calendar-line"
+    : "border-b border-calendar-lineSubtle";
+
+  const base = `absolute left-0 right-0 ${border}`;
+
+  switch (status) {
+    case "available":
+      return `${base} cursor-pointer bg-transparent hover:bg-sky-200/80 active:bg-sky-300/70`;
+    case "booked":
+      return `${base} cursor-default bg-transparent pointer-events-none`;
+    case "blocked":
+      return `${base} cursor-not-allowed bg-amber-50/70`;
+    case "unavailable":
+      return `${base} cursor-not-allowed bg-zinc-100/50`;
+  }
+}
 
 function defaultFormValues(
   date: string,
@@ -66,11 +77,24 @@ function bookingPosition(
     (end.getTime() - dayOpen.getTime()) / (SLOT_MINUTES * 60 * 1000);
   if (endMin <= 0 || startMin >= SLOT_COUNT) return null;
   const top = Math.max(0, startMin) * ROW_HEIGHT;
-  const height = (Math.min(SLOT_COUNT, endMin) - Math.max(0, startMin)) * ROW_HEIGHT;
-  return { top, height };
+  const height =
+    (Math.min(SLOT_COUNT, endMin) - Math.max(0, startMin)) * ROW_HEIGHT;
+  return { top, height: Math.max(height, 20) };
+}
+
+function useNowTick() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
 }
 
 export function WeeklyCalendar() {
+  const now = useNowTick();
+  const todayIso = formatDateISO(now);
+
   const [weekStart, setWeekStart] = useState(() =>
     formatDateISO(getWeekStart(new Date()))
   );
@@ -91,6 +115,14 @@ export function WeeklyCalendar() {
       const res = await fetch(
         `/api/availability?weekStart=${encodeURIComponent(weekStart)}`
       );
+      const contentType = res.headers.get("content-type") ?? "";
+      if (!contentType.includes("application/json")) {
+        setAvailability(null);
+        setLoadError(
+          "Calendar API returned an error. Stop the dev server, run npm run dev:clean, and refresh."
+        );
+        return;
+      }
       const data = await res.json();
       if (res.ok) {
         setAvailability(data);
@@ -103,7 +135,9 @@ export function WeeklyCalendar() {
       );
     } catch {
       setAvailability(null);
-      setLoadError("Network error loading the calendar. Please refresh.");
+      setLoadError(
+        "Could not load the calendar. Try npm run dev:clean, then refresh."
+      );
     } finally {
       setLoading(false);
     }
@@ -124,15 +158,26 @@ export function WeeklyCalendar() {
   );
 
   const dayMap = useMemo(() => {
-    const m = new Map(
-      availability?.days.map((d) => [d.date, d]) ?? []
-    );
+    const m = new Map(availability?.days.map((d) => [d.date, d]) ?? []);
     return m;
   }, [availability]);
+
+  const currentTimeTop = useMemo(() => {
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+    if (hour < OPEN_HOUR || hour > CLOSE_HOUR) return null;
+    if (hour === CLOSE_HOUR && minute > 0) return null;
+    const mins = (hour - OPEN_HOUR) * 60 + minute;
+    return (mins / SLOT_MINUTES) * ROW_HEIGHT;
+  }, [now]);
 
   function shiftWeek(delta: number) {
     const next = addDays(parseLocalDate(weekStart), delta * 7);
     setWeekStart(formatDateISO(getWeekStart(next)));
+  }
+
+  function goToToday() {
+    setWeekStart(formatDateISO(getWeekStart(new Date())));
   }
 
   function handleSlotClick(date: string, slotStart: Date) {
@@ -160,32 +205,45 @@ export function WeeklyCalendar() {
     ? `${availability.weekStart} — ${availability.weekEnd}`
     : weekStart;
 
+  const isViewingToday = grid.some(({ date }) => date === todayIso);
+
   return (
     <div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Calendar</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-ink">
+            Calendar
+          </h1>
           <p className="mt-1 text-sm text-ink-muted">
             Monday–Thursday · 9:00 AM–5:00 PM · 15-minute slots
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={goToToday}
+            className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-ink shadow-sm hover:bg-zinc-50"
+          >
+            Today
+          </button>
           <button
             type="button"
             onClick={() => shiftWeek(-1)}
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm hover:bg-white"
+            className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm shadow-sm hover:bg-zinc-50"
+            aria-label="Previous week"
           >
-            ← Previous week
+            ←
           </button>
-          <span className="min-w-[10rem] text-center text-sm font-medium">
+          <span className="min-w-[10rem] rounded-lg border border-zinc-200 bg-white px-3 py-2 text-center text-sm font-medium shadow-sm">
             {weekLabel}
           </span>
           <button
             type="button"
             onClick={() => shiftWeek(1)}
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm hover:bg-white"
+            className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm shadow-sm hover:bg-zinc-50"
+            aria-label="Next week"
           >
-            Next week →
+            →
           </button>
         </div>
       </div>
@@ -226,120 +284,159 @@ export function WeeklyCalendar() {
       )}
 
       {!loading && availability && (
-        <div className="mt-6 overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
-          <div className="min-w-[720px]">
-            <div className="grid grid-cols-[4rem_repeat(4,1fr)] border-b border-zinc-200">
-              <div />
-              {grid.map(({ date }) => {
-                const d = parseLocalDate(date);
-                const label = d.toLocaleDateString("en-US", {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                });
-                const dayInfo = dayMap.get(date);
-                return (
-                  <div
-                    key={date}
-                    className="border-l border-zinc-100 px-2 py-3 text-center text-sm font-medium"
-                  >
-                    {label}
-                    {dayInfo?.isBlocked && (
-                      <span className="mt-1 block text-xs font-normal text-amber-700">
-                        Blocked
-                      </span>
-                    )}
-                    {dayInfo?.isShootDayCapReached && (
-                      <span className="mt-1 block text-xs font-normal text-zinc-500">
-                        Week cap
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="grid grid-cols-[4rem_repeat(4,1fr)]">
-              <div className="relative">
-                {grid[0].slots.map((slot, i) => {
-                  if (slot.getMinutes() % 30 !== 0) return null;
+        <div className="mt-6 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <div className="min-w-[720px]">
+              <div className="grid grid-cols-[3.5rem_repeat(4,1fr)] border-b border-calendar-line bg-calendar-header">
+                <div className="border-r border-calendar-line" />
+                {grid.map(({ date }) => {
+                  const d = parseLocalDate(date);
+                  const isToday = date === todayIso;
+                  const dayName = d
+                    .toLocaleDateString("en-US", { weekday: "short" })
+                    .toUpperCase();
+                  const dayInfo = dayMap.get(date);
                   return (
                     <div
-                      key={i}
-                      className="border-b border-zinc-50 pr-2 text-right text-[10px] text-ink-muted"
-                      style={{ height: ROW_HEIGHT * 2 }}
+                      key={date}
+                      className={`border-l border-calendar-line px-2 py-3 text-center ${
+                        isToday ? "bg-calendar-today" : ""
+                      }`}
                     >
-                      {slot.toLocaleTimeString("en-US", {
-                        hour: "numeric",
-                        minute: "2-digit",
-                        hour12: true,
-                      })}
+                      <p className="text-[10px] font-medium tracking-wide text-zinc-500">
+                        {dayName}
+                      </p>
+                      <p
+                        className={`mt-0.5 text-xl font-semibold leading-none ${
+                          isToday ? "text-sky-600" : "text-ink"
+                        }`}
+                      >
+                        {d.getDate()}
+                      </p>
+                      {dayInfo?.isBlocked && (
+                        <span className="mt-1.5 block text-[10px] font-medium text-amber-700">
+                          Blocked
+                        </span>
+                      )}
+                      {dayInfo?.isShootDayCapReached && (
+                        <span className="mt-1 block text-[10px] text-zinc-500">
+                          Week cap
+                        </span>
+                      )}
                     </div>
                   );
                 })}
               </div>
 
-              {grid.map(({ date, slots }) => {
-                const dayInfo = dayMap.get(date);
-                const dayBookings =
-                  availability.bookings.filter(
-                    (b) =>
-                      formatDateISO(new Date(b.start_time)) === date
+              <div className="relative grid grid-cols-[3.5rem_repeat(4,1fr)] bg-calendar-bg">
+                <div
+                  className="relative border-r border-calendar-line bg-calendar-header"
+                  style={{ height: SLOT_COUNT * ROW_HEIGHT }}
+                >
+                  {grid[0].slots.map((slot, i) => {
+                    if (slot.getMinutes() % 30 !== 0) return null;
+                    return (
+                      <div
+                        key={i}
+                        className="absolute right-0 left-0 flex items-start justify-end border-b border-calendar-lineSubtle pr-2 text-[10px] font-medium text-zinc-500"
+                        style={{
+                          top: i * ROW_HEIGHT,
+                          height: ROW_HEIGHT * 2,
+                        }}
+                      >
+                        <span className="-translate-y-1.5">
+                          {slot.toLocaleTimeString("en-US", {
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          })}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {grid.map(({ date, slots }) => {
+                  const dayInfo = dayMap.get(date);
+                  const isToday = date === todayIso;
+                  const dayBookings = availability.bookings.filter(
+                    (b) => formatDateISO(new Date(b.start_time)) === date
                   );
 
-                return (
-                  <div
-                    key={date}
-                    className="relative border-l border-zinc-100"
-                    style={{ height: SLOT_COUNT * ROW_HEIGHT }}
-                  >
-                    {slots.map((slotStart, i) => {
-                      const slotEnd = slotEndTime(slotStart);
-                      const status = getSlotStatus(
-                        slotStart,
-                        slotEnd,
-                        availability.bookings,
-                        dayInfo
-                      );
-                      return (
-                        <button
-                          key={i}
-                          type="button"
-                          disabled={status !== "available"}
-                          onClick={() => handleSlotClick(date, slotStart)}
-                          className={`absolute left-0 right-0 border-b border-white/50 ${slotStatusClass[status]}`}
-                          style={{
-                            top: i * ROW_HEIGHT,
-                            height: ROW_HEIGHT,
-                          }}
-                          aria-label={`${date} ${formatTimeInput(slotStart)} ${status}`}
-                        />
-                      );
-                    })}
+                  return (
+                    <div
+                      key={date}
+                      className={`relative border-l border-calendar-line ${
+                        isToday ? "bg-calendar-today/40" : "bg-calendar-cell"
+                      }`}
+                      style={{ height: SLOT_COUNT * ROW_HEIGHT }}
+                    >
+                      {slots.map((slotStart, i) => {
+                        const slotEnd = slotEndTime(slotStart);
+                        const status = getSlotStatus(
+                          slotStart,
+                          slotEnd,
+                          availability.bookings,
+                          dayInfo
+                        );
+                        const Tag = status === "available" ? "button" : "div";
+                        return (
+                          <Tag
+                            key={i}
+                            {...(status === "available"
+                              ? {
+                                  type: "button" as const,
+                                  onClick: () =>
+                                    handleSlotClick(date, slotStart),
+                                }
+                              : {})}
+                            className={slotRowClass(status, i)}
+                            style={{
+                              top: i * ROW_HEIGHT,
+                              height: ROW_HEIGHT,
+                            }}
+                            aria-label={`${date} ${formatTimeInput(slotStart)} ${status}`}
+                          />
+                        );
+                      })}
 
-                    {dayBookings.map((booking) => {
-                      const start = new Date(booking.start_time);
-                      const end = new Date(booking.end_time);
-                      const pos = bookingPosition(
-                        start,
-                        end,
-                        parseLocalDate(date)
-                      );
-                      if (!pos) return null;
-                      return (
-                        <BookingCard
-                          key={booking.id}
-                          booking={booking}
-                          style={{
-                            top: pos.top,
-                            height: pos.height,
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                );
-              })}
+                      {dayBookings.map((booking) => {
+                        const start = new Date(booking.start_time);
+                        const end = new Date(booking.end_time);
+                        const pos = bookingPosition(
+                          start,
+                          end,
+                          parseLocalDate(date)
+                        );
+                        if (!pos) return null;
+                        return (
+                          <BookingCard
+                            key={booking.id}
+                            booking={booking}
+                            style={{
+                              top: pos.top,
+                              height: pos.height,
+                            }}
+                          />
+                        );
+                      })}
+
+                      {isToday &&
+                        isViewingToday &&
+                        currentTimeTop !== null && (
+                          <div
+                            className="pointer-events-none absolute right-0 left-0 z-30 flex items-center"
+                            style={{ top: currentTimeTop }}
+                            aria-hidden
+                          >
+                            <div className="h-2.5 w-2.5 -translate-x-1/2 rounded-full border-2 border-white bg-zinc-800 shadow-sm" />
+                            <div className="h-px flex-1 bg-zinc-800/70" />
+                          </div>
+                        )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
