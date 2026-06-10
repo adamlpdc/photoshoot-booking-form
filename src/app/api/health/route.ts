@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getResendHealthCheck } from "@/lib/notifications";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 
 /**
@@ -25,6 +26,8 @@ export async function GET() {
   } else {
     checks.adminPassword = "ok";
   }
+
+  checks.resend = getResendHealthCheck();
 
   const envOk =
     checks.supabaseUrl === "ok" &&
@@ -71,9 +74,14 @@ export async function GET() {
       );
     }
 
+    const emailNote =
+      checks.resend === "ok"
+        ? " Resend is configured for booking emails."
+        : " Resend not configured — bookings work but emails are not sent.";
+
     return NextResponse.json({
       ok: true,
-      message: "Supabase is linked and tables are ready.",
+      message: `Supabase is linked and tables are ready.${emailNote}`,
       checks: {
         ...checks,
         bookingsTable: "ok",

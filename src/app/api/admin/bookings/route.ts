@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWeekRangeBounds, getWeekStart, parseLocalDate, formatDateISO } from "@/lib/datetime";
+import {
+  formatDateISO,
+  getWeekDates,
+  getWeekRangeBounds,
+  getWeekStart,
+  parseLocalDate,
+} from "@/lib/datetime";
 import { fetchBookingsForRange } from "@/lib/supabase-server";
 import {
   verifyAdminPassword,
@@ -23,7 +29,13 @@ export async function POST(request: NextRequest) {
 
     const anchor = getWeekStart(parseLocalDate(body.weekStart));
     const { start, end } = getWeekRangeBounds(anchor);
-    const bookings = await fetchBookingsForRange(start, end);
+    const allInRange = await fetchBookingsForRange(start, end);
+    const weekDateSet = new Set(
+      getWeekDates(anchor).map((d) => formatDateISO(d))
+    );
+    const bookings = allInRange.filter((b) =>
+      weekDateSet.has(formatDateISO(new Date(b.start_time)))
+    );
 
     return NextResponse.json({
       weekStart: formatDateISO(anchor),

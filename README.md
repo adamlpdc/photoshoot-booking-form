@@ -52,6 +52,7 @@ Fill in:
 - `SUPABASE_SERVICE_ROLE_KEY` (server API routes only)
 - `ADMIN_PASSWORD` (day blocking; never commit real values)
 - `NEXT_PUBLIC_APP_URL` (e.g. `http://localhost:3000` or your Vercel URL)
+- `RESEND_API_KEY` and `RESEND_FROM_EMAIL` (booking emails; optional for local testing)
 
 ### 3. Install and run
 
@@ -85,6 +86,10 @@ git push -u origin main
 | `SUPABASE_SERVICE_ROLE_KEY` | service_role secret |
 | `ADMIN_PASSWORD` | Your admin password for `/admin` |
 | `NEXT_PUBLIC_APP_URL` | `https://YOUR_PROJECT.vercel.app` (set after first deploy, then redeploy) |
+| `RESEND_API_KEY` | From [resend.com/api-keys](https://resend.com/api-keys) |
+| `RESEND_FROM_EMAIL` | Verified sender, e.g. `Photoshoot <bookings@yourdomain.com>` |
+| `RESEND_REPLY_TO` | Optional reply-to address |
+
 4. Deploy. Copy the production URL, set `NEXT_PUBLIC_APP_URL` to that URL, **Redeploy** so booking edit links work.
 
 ## Pages
@@ -108,16 +113,22 @@ git push -u origin main
 | DELETE | `/api/admin/block-day` | Unblock day (`date`, `password`) |
 | GET | `/api/booking-by-token/[token]` | Full booking for edit page |
 
-## Office 365 (stub)
+## Email (Resend)
 
-`sendBookingNotifications()` in `src/lib/notifications.ts` logs invite payloads today. Wire Microsoft Graph (calendar event + email) there when ready.
+Booking create, update, and cancel events send email via [Resend](https://resend.com):
+
+1. Create an API key and **verify your sending domain** in the Resend dashboard.
+2. Set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` in `.env.local` / Vercel.
+3. Confirm `/api/health` shows `"resend": "ok"`.
+
+Emails go to the **requester** and the **designer** (Edi / Sol) with booking details and an edit link (except on cancellation).
 
 ## Designers
 
 - **Edi** — ehidalgo@pdcwellness.com  
 - **Sol** — HYoo@pdcwellness.com  
 
-Notifications use these addresses in the stub payload.
+Designer addresses receive booking notification emails when Resend is configured.
 
 ## License
 

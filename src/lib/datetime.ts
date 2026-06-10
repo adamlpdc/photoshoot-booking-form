@@ -87,10 +87,13 @@ export function getWeekStart(date: Date): Date {
   return addDays(noon, diff);
 }
 
-/** Inclusive Mon–Thu dates and exclusive end (next Monday) for range queries. */
+/** Mon 00:00 GMT through next Mon 00:00 GMT (exclusive) for range queries. */
 export function getWeekRangeBounds(anchor: Date): { start: Date; end: Date } {
-  const start = getWeekStart(anchor);
-  const end = addDays(start, 7);
+  const monday = getWeekStart(anchor);
+  const mondayIso = formatDateISO(monday);
+  const start = combineDateAndTime(mondayIso, "00:00");
+  const nextMondayIso = formatDateISO(addDays(monday, 7));
+  const end = combineDateAndTime(nextMondayIso, "00:00");
   return { start, end };
 }
 

@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { displayBrand, formatTimeLabel } from "@/lib/datetime";
+import {
+  displayBrand,
+  formatDateISO,
+  formatDateUKFromIso,
+  formatTimeLabel,
+} from "@/lib/datetime";
 import { bookingToFormInput } from "@/lib/booking-update";
 import type { Booking } from "@/lib/types";
 import {
@@ -137,6 +142,7 @@ export function AdminBookingPanel({
                   <p className="font-medium">{brand}</p>
                   <p className="text-ink-muted">{b.title}</p>
                   <p className="text-ink-muted">
+                    {formatDateUKFromIso(formatDateISO(start))} ·{" "}
                     {formatTimeLabel(start)} – {formatTimeLabel(end)} ·{" "}
                     {b.designer}
                   </p>

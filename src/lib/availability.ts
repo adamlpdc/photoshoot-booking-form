@@ -26,12 +26,16 @@ export function buildAvailability(
   const weekStart = getWeekStart(parseLocalDate(weekStartStr));
   const weekDates = getWeekDates(weekStart);
   const weekEnd = formatDateISO(weekDates[weekDates.length - 1]);
+  const weekDateSet = new Set(weekDates.map((d) => formatDateISO(d)));
+
+  const weekBookings = bookings.filter((b) =>
+    weekDateSet.has(formatDateISO(new Date(b.start_time)))
+  );
 
   const blockedSet = new Set(blockedDays.map((b) => b.date));
   const shootDays = new Set(
-    bookings.map((b) => formatDateISO(new Date(b.start_time)))
+    weekBookings.map((b) => formatDateISO(new Date(b.start_time)))
   );
-  const capReached = shootDays.size >= 2;
 
   const days: DayAvailability[] = weekDates.map((d) => {
     const date = formatDateISO(d);
@@ -40,7 +44,7 @@ export function buildAvailability(
       isBlocked: blockedSet.has(date),
       isShootDayCapReached: isDayBlockedByShootCap(
         date,
-        bookings,
+        weekBookings,
         weekStart
       ),
       isExistingShootDay: shootDays.has(date),
@@ -50,7 +54,7 @@ export function buildAvailability(
   return {
     weekStart: formatDateISO(weekStart),
     weekEnd,
-    bookings: bookings.map(toPublicBooking) as PublicBooking[],
+    bookings: weekBookings.map(toPublicBooking) as PublicBooking[],
     blockedDays,
     days,
   };
